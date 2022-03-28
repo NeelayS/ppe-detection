@@ -4,6 +4,6 @@ Example usage:
 
 ```shell
 
-    python main.py "data/images/example.jpg"
+python main.py "data/images/example.jpg"
 
 ```
