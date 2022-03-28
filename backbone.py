@@ -12,4 +12,4 @@ class Backbone(nn.Module):
         return self.backbone(x)
 
 
-# Write backbone
+# Write backbone here if desired. By default, a pre-trained VGG model is used as the backbone in the model.py file
