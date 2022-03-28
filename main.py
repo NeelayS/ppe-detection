@@ -10,7 +10,7 @@ if __name__ == "__main__":
         detection_weights="weights/yolov3-tiny.weights",
         detection_reshape_size=(256, 128),
         classification_features_dim=16384,
-        classification_layers_config=[1024, 512, 2],
+        classification_layers_config=[1024, 512],
         classification_n_heads=3,
     )
     outs = model("data/image_from_china(234).jpg")
