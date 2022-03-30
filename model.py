@@ -86,7 +86,7 @@ class ClassificationModel(nn.Module):
         self.reshape_size = reshape_size
 
         if backbone is None:
-            self.backbone = models.vgg19(pretrained=True).features
+            self.backbone = models.vgg19(pretrained=False).features
         else:
             self.backbone = backbone
 

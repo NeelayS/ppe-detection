@@ -14,4 +14,6 @@ if __name__ == "__main__":
         classification_n_heads=3,
     )
     outs = model("data/image_from_china(234).jpg")
-    print(outs)
+    for out in outs:
+        print(out)
+        print()
