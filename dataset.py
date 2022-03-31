@@ -29,6 +29,8 @@ class PictorPPEDataset(Dataset):
         for det_annotation in annotation[1:]:
 
             label = int(det_annotation[-1])
+            if label == 2 or label == 3:
+                label = 1
             labels.append(label)
 
             x1, y1, x2, y2 = list(map(lambda x: int(x), det_annotation[:-2].split(",")))
