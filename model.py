@@ -51,7 +51,8 @@ class YoloV3DetectionModel:
             if (
                 detection[-2] > self.threshold and int(detection[-1]) == 0
             ):  # 0 = person class
-                filtered_detections.append(list(map(lambda x: int(x), detection[:-2])))
+                filtered_detection = list(map(lambda x: max(int(x), 0), detection[:-2]))
+                filtered_detections.append(filtered_detection)
 
         return filtered_detections
 
