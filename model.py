@@ -1,4 +1,5 @@
 import cv2
+import os
 from pytorchyolo import detect, models as yolo_models
 import torch
 from torch import nn
@@ -54,7 +55,7 @@ class YoloV3DetectionModel:
 
         return filtered_detections
 
-    def __call__(self, img_path):
+    def __call__(self, img_path, return_detections=False):
 
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -73,6 +74,9 @@ class YoloV3DetectionModel:
                 .unsqueeze(0)
                 .float()
             )
+
+        if return_detections:
+            return cropped_detections, detections
 
         return cropped_detections
 
@@ -130,6 +134,7 @@ class CompleteModel(nn.Module):
         classification_features_dim,
         classification_layers_config,
         classification_n_heads,
+        classification_model_weights=None,
     ):
         super().__init__()
 
@@ -145,12 +150,72 @@ class CompleteModel(nn.Module):
             n_heads=classification_n_heads,
         )
 
+        if classification_model_weights is not None:
+            self.classification_model.load_state_dict(
+                torch.load(classification_model_weights, map_location="cpu")
+            )
+
     def forward(self, img_path):
 
         detections = self.detection_model(img_path)
         img_outs = self.classification_model(detections)
 
         return img_outs
+
+
+class Predictor:
+    def __init__(
+        self, det_model_params, class_model_params, classification_model_weights=None
+    ):
+
+        self.det_model = YoloV3DetectionModel(**det_model_params)
+        self.class_model = ClassificationModel(**class_model_params)
+
+        if classification_model_weights is not None:
+            self.class_model.load_state_dict(
+                torch.load(classification_model_weights, map_location="cpu")
+            )
+
+        self.class_model.eval()
+
+    def __call__(self, img_path, task_id=0, save_dir="."):
+
+        cropped_detections, detections = self.det_model(
+            img_path, return_detections=True
+        )
+
+        with torch.no_grad():
+
+            img_outs = self.class_model(cropped_detections)
+
+            classifications = []
+            for img_out in img_outs:
+                classifications.append(
+                    torch.argmax(F.softmax(img_out[task_id], dim=1), dim=1).item()
+                )
+
+        img = cv2.imread(img_path)
+        for detection, classification in zip(detections, classifications):
+
+            if classification == 1:
+                cv2.rectangle(
+                    img,
+                    (detection[0], detection[1]),
+                    (detection[2], detection[3]),
+                    (0, 255, 0),
+                    2,
+                )
+            else:
+                cv2.rectangle(
+                    img,
+                    (detection[0], detection[1]),
+                    (detection[2], detection[3]),
+                    (0, 0, 255),
+                    2,
+                )
+
+        save_path = os.path.join(save_dir, "output_" + os.path.basename(img_path))
+        cv2.imwrite(save_path, img)
 
 
 # Map outs for a detection uniquely to the detection
