@@ -23,10 +23,7 @@ class PoseDetectionModel:
 
         for i in range(len(results)):
 
-            if (
-                results["scores"][i] < self.threshold
-                or int(results["labels"][i]) != 1
-            ):
+            if results["scores"][i] < self.threshold or int(results["labels"][i]) != 1:
                 continue
 
             keypoints = results["keypoints"][i]
@@ -55,7 +52,7 @@ class PoseDetectionModel:
         if not isinstance(img, torch.Tensor):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = torch.from_numpy(img).permute(2, 0, 1).float()
-            
+
         if len(img.shape) == 3:
             img = img.unsqueeze(0)
 
@@ -65,8 +62,11 @@ class PoseDetectionModel:
         out = self.model(n_img)[0]
         filtered_detections = self._filter_detections(out)
 
+        img = img.squeeze(0)
         cropped_detections = []
+
         for detection in filtered_detections:
+
             cropped_detections.append(
                 img[:, detection[1] : detection[3], detection[0] : detection[2]]
                 .unsqueeze(0)
@@ -178,7 +178,7 @@ class ClassificationModel(nn.Module):
         outs = []
 
         for detection in detections:
-            
+
             detection = F.interpolate(
                 detection, self.reshape_size, mode="bilinear", align_corners=True
             )
@@ -209,7 +209,7 @@ class CompleteModel(nn.Module):
         super().__init__()
 
         self.detection_model = PoseDetectionModel(
-            thresholdold=detection_threshold, device=device
+            threshold=detection_threshold, device=device
         )
         self.classification_model = ClassificationModel(
             reshape_size=detection_reshape_size,
@@ -246,7 +246,11 @@ class CompleteModel(nn.Module):
 
 class Predictor:
     def __init__(
-        self, det_model_params, class_model_params, classification_model_weights=None, device=torch.device("cpu")
+        self,
+        det_model_params,
+        class_model_params,
+        classification_model_weights=None,
+        device=torch.device("cpu"),
     ):
 
         self.det_model = PoseDetectionModel(**det_model_params)
@@ -297,9 +301,3 @@ class Predictor:
 
         save_path = os.path.join(save_dir, "output_" + os.path.basename(img_path))
         cv2.imwrite(save_path, img)
-
-
-# Map outs for a detection uniquely to the detection
-# Pre-process images
-# Detection model
-# Load pre-trained weights
