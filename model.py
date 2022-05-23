@@ -233,6 +233,11 @@ class CompleteModel(nn.Module):
 
         if img is None:
             img = io.read_image(img_path)
+
+        if not isinstance(img, torch.Tensor):
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = torch.from_numpy(img).permute(2, 0, 1).float()
+
         if len(img.shape) == 3:
             img = img.unsqueeze(0)
 

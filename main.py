@@ -8,9 +8,11 @@ from model import CompleteModel, Predictor
 if __name__ == "__main__":
 
     import argparse
+    import os
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--img", type=str)
+    parser.add_argument("--img_path", type=str)
+    parser.add_argument("--save_dir", type=str)
     args = parser.parse_args()
 
     model = CompleteModel(
@@ -21,13 +23,15 @@ if __name__ == "__main__":
         classification_n_heads=3,
         classification_model_weights="../weights/best.pth",
     )
-    outs = model(img_path=args.img)
+    outs = model(img_path=args.img_path)
     for out in outs:
         print(out)
         print(
             torch.argmax(F.softmax(out[0], dim=1), dim=1).item()
         )  # out indexed into 0 which corresponds to the classification head for hats. Similarly 1 for vest and 2 for boots
         print()
+
+    os.makedirs(args.save_dir, exist_ok=True)
 
     predictor = Predictor(
         det_model_params={
@@ -42,5 +46,5 @@ if __name__ == "__main__":
         classification_model_weights="../weights/best.pth",
     )
     predictor(
-        args.img, save_dir="results", task_id=1
+        img_path=args.img_path, save_dir="results", task_id=1
     )  # task_id = 1 for vest classification
