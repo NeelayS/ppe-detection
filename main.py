@@ -15,8 +15,6 @@ if __name__ == "__main__":
 
     # model = CompleteModel(
     #     detection_threshold=0.05,
-    #     detection_config="config/yolov3.cfg",
-    #     detection_weights="weights/yolov3.weights",
     #     detection_reshape_size=(96, 32),
     #     classification_features_dim=1536,
     #     classification_layers_config=[512, 128],
@@ -31,9 +29,7 @@ if __name__ == "__main__":
 
     predictor = Predictor(
         det_model_params={
-            "threshold": 0.05,
-            "config_path": "config/yolov3.cfg",
-            "weights_path": "weights/yolov3.weights",
+            "threshold": 0.25,
         },
         class_model_params={
             "reshape_size": (96, 32),
@@ -41,6 +37,6 @@ if __name__ == "__main__":
             "layers_config": [512, 128],
             "n_heads": 1,
         },
-        classification_model_weights="weights/best_model.pth",
+        classification_model_weights="../weights/best_model.pth",
     )
     predictor(args.img, save_dir="results")

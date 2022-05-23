@@ -9,12 +9,13 @@ from backbone import Backbone
 
 
 class PoseDetectionModel:
-    def __init__(self, device=torch.device("cpu"), conf_thresh=0.5):
+    def __init__(self, device=torch.device("cpu"), threshold=0.5):
 
         self.model = models.detection.keypointrcnn_resnet50_fpn(pretrained=True).eval()
         self.model.to(device)
 
-        self.conf_thresh = conf_thresh
+        self.device = device
+        self.threshold = threshold
 
     def _filter_detections(self, results):
 
@@ -23,7 +24,7 @@ class PoseDetectionModel:
         for i in range(len(results)):
 
             if (
-                results["scores"][i] < self.conf_thresh
+                results["scores"][i] < self.threshold
                 or int(results["labels"][i]) != 1
             ):
                 continue
@@ -49,15 +50,17 @@ class PoseDetectionModel:
         ), "Either img or img_path must be provided"
 
         if img is None:
-            img = io.imread(img_path)
+            img = io.read_image(img_path)
 
         if not isinstance(img, torch.Tensor):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = torch.from_numpy(img).permute(2, 0, 1).float()
+            
+        if len(img.shape) == 3:
             img = img.unsqueeze(0)
 
         n_img = img / 255.0
-        n_img = img.to(self.device)
+        n_img = n_img.to(self.device)
 
         out = self.model(n_img)[0]
         filtered_detections = self._filter_detections(out)
@@ -175,7 +178,7 @@ class ClassificationModel(nn.Module):
         outs = []
 
         for detection in detections:
-
+            
             detection = F.interpolate(
                 detection, self.reshape_size, mode="bilinear", align_corners=True
             )
@@ -206,7 +209,7 @@ class CompleteModel(nn.Module):
         super().__init__()
 
         self.detection_model = PoseDetectionModel(
-            conf_threshold=detection_threshold, device=device
+            thresholdold=detection_threshold, device=device
         )
         self.classification_model = ClassificationModel(
             reshape_size=detection_reshape_size,
@@ -220,21 +223,34 @@ class CompleteModel(nn.Module):
                 torch.load(classification_model_weights, map_location="cpu")
             )
 
-    def forward(self, img_path):
+        self.device = device
 
-        detections = self.detection_model(img_path)
-        img_outs = self.classification_model(detections)
+    def forward(self, img=None, img_path=None):
+
+        assert (
+            img is not None or img_path is not None
+        ), "Either img or img_path must be provided"
+
+        if img is None:
+            img = io.read_image(img_path)
+        if len(img.shape) == 3:
+            img = img.unsqueeze(0)
+
+        img = img.to(self.device)
+
+        cropped_detections = self.detection_model(img=img, img_path=img_path)
+        img_outs = self.classification_model(cropped_detections)
 
         return img_outs
 
 
 class Predictor:
     def __init__(
-        self, det_model_params, class_model_params, classification_model_weights=None
+        self, det_model_params, class_model_params, classification_model_weights=None, device=torch.device("cpu")
     ):
 
         self.det_model = PoseDetectionModel(**det_model_params)
-        self.class_model = ClassificationModel(**class_model_params)
+        self.class_model = ClassificationModel(**class_model_params).to(device)
 
         if classification_model_weights is not None:
             self.class_model.load_state_dict(
@@ -246,7 +262,7 @@ class Predictor:
     def __call__(self, img_path, task_id=0, save_dir="."):
 
         cropped_detections, detections = self.det_model(
-            img_path, return_detections=True
+            img_path=img_path, return_detections=True
         )
 
         with torch.no_grad():
