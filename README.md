@@ -1,6 +1,14 @@
-# ppe-detection
+# PPE Detection
 
-Example usage:
+### Installation
+
+```shell
+
+pip install requirements.txt
+
+```
+
+### Example usage:
 
 ```shell
 
